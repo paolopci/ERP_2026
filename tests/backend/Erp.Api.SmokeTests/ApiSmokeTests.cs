@@ -1,6 +1,9 @@
 using System.Net;
+using Erp.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Erp.Api.SmokeTests;
 
@@ -34,12 +37,12 @@ public sealed class ApiSmokeTests : IClassFixture<WebApplicationFactory<Program>
     {
         using var factory = _factory.WithWebHostBuilder(builder =>
         {
-            builder.ConfigureAppConfiguration((_, configBuilder) =>
+            builder.ConfigureServices(services =>
             {
-                configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["ConnectionStrings:SqlServer"] = "Server=invalid-host,1433;Database=ErpDb;User Id=sa;Password=invalid;TrustServerCertificate=true;Encrypt=false"
-                });
+                var descriptor = services.Single(d => d.ServiceType == typeof(DbContextOptions<ErpDbContext>));
+                services.Remove(descriptor);
+                services.AddDbContext<ErpDbContext>(options =>
+                    options.UseSqlServer("Server=invalid-host,1433;Database=ErpDb;User Id=sa;Password=invalid;TrustServerCertificate=true;Encrypt=false"));
             });
         });
 

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace Erp.Domain.Common;
 
 public abstract class Entity
@@ -17,6 +19,7 @@ public abstract class Entity
 
     public DateTimeOffset UpdatedAtUtc { get; protected set; }
 
+    [NotMapped]
     public IReadOnlyCollection<DomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     protected void Touch()
