@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f8f5ef 0%, #e6edf4 55%, #d9e3ea 100%);
+  color: #1b2a34;
+  font-family: "Source Sans 3", "Segoe UI", sans-serif;
+}
+
+.layout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1rem 3rem;
+}
+
+.hero {
+  padding: 1.5rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 12px 40px rgba(25, 40, 50, 0.08);
+}
+
+.status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.status article {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1rem;
+  border-radius: 0.75rem;
+}
