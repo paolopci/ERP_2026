@@ -11,6 +11,8 @@ public sealed class MovimentoMagazzinoConfiguration : IEntityTypeConfiguration<M
         builder.ToTable("MovimentiMagazzino", "inventory");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.CompanyId).IsRequired();
+
         builder.Property(x => x.Quantita)
             .HasPrecision(18, 3)
             .IsRequired();
@@ -19,5 +21,10 @@ public sealed class MovimentoMagazzinoConfiguration : IEntityTypeConfiguration<M
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired();
+
+        builder.Property(x => x.CreatedAtUtc).IsRequired();
+        builder.Property(x => x.UpdatedAtUtc).IsRequired();
+
+        builder.HasIndex(x => new { x.CompanyId, x.ArticoloId, x.SedeId });
     }
 }

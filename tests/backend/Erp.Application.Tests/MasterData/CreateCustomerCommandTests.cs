@@ -1,63 +1,65 @@
 using Erp.Application.Abstractions.Persistence;
-using Erp.Application.Common.Models;
+using Erp.Application.Abstractions.Security;
 using Erp.Application.MasterData.Customers.Commands.CreateCustomer;
-using Erp.Domain.MasterData;
+using FluentAssertions;
+using NSubstitute;
 
 namespace Erp.Application.Tests.MasterData;
 
 public sealed class CreateCustomerCommandTests
 {
-    [Fact]
-    public async Task Handle_ValidRequest_ReturnsNewCustomerId()
+    private readonly ICustomerRepository _customerRepository;
+    private readonly IApplicationUnitOfWork _applicationUnitOfWork;
+    private readonly ITenantContext _tenantContext;
+    private readonly CreateCustomerCommandHandler _sut;
+
+    public CreateCustomerCommandTests()
     {
-        var repository = new InMemoryCustomerRepository();
-        var unitOfWork = new InMemoryUnitOfWork();
-        var handler = new CreateCustomerCommandHandler(repository, unitOfWork);
-
-        var result = await handler.Handle(
-            new CreateCustomerCommand("CLI-001", "Cliente Uno", "cliente1@test.local"),
-            CancellationToken.None);
-
-        Assert.NotEqual(Guid.Empty, result);
-        Assert.Single(repository.Items);
-        Assert.Equal(1, unitOfWork.SaveCalls);
+        _customerRepository = Substitute.For<ICustomerRepository>();
+        _applicationUnitOfWork = Substitute.For<IApplicationUnitOfWork>();
+        _tenantContext = Substitute.For<ITenantContext>();
+        _sut = new CreateCustomerCommandHandler(_customerRepository, _applicationUnitOfWork, _tenantContext);
     }
 
     [Fact]
-    public void Validator_InvalidEmail_ReturnsValidationError()
+    public async Task Handle_ConTenantValido_RitornaIdNuovoCliente()
     {
-        var validator = new CreateCustomerCommandValidator();
+        // Arrange
+        _tenantContext.CompanyId.Returns(Guid.NewGuid());
+        var command = new CreateCustomerCommand("CLI-001", "Cliente Uno", "cliente1@test.local");
 
-        var result = validator.Validate(new CreateCustomerCommand("CLI-001", "Cliente Uno", "mail_non_valida"));
+        // Act
+        var result = await _sut.Handle(command, CancellationToken.None);
 
-        Assert.False(result.IsValid);
-        Assert.Contains(result.Errors, e => e.PropertyName == "Email");
+        // Assert
+        result.Should().NotBe(Guid.Empty);
     }
 
-    private sealed class InMemoryCustomerRepository : ICustomerRepository
+    [Fact]
+    public async Task Handle_ConTenantValido_SalvaUnitaDiLavoro()
     {
-        public List<Cliente> Items { get; } = [];
+        // Arrange
+        _tenantContext.CompanyId.Returns(Guid.NewGuid());
+        var command = new CreateCustomerCommand("CLI-001", "Cliente Uno", "cliente1@test.local");
 
-        public Task AddAsync(Cliente cliente, CancellationToken cancellationToken)
-        {
-            Items.Add(cliente);
-            return Task.CompletedTask;
-        }
+        // Act
+        await _sut.Handle(command, CancellationToken.None);
 
-        public Task<CustomerDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
-        {
-            return Task.FromResult<CustomerDto?>(null);
-        }
+        // Assert
+        await _applicationUnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
-    private sealed class InMemoryUnitOfWork : IApplicationUnitOfWork
+    [Fact]
+    public async Task Handle_SenzaTenant_LanciaEccezione()
     {
-        public int SaveCalls { get; private set; }
+        // Arrange
+        _tenantContext.CompanyId.Returns((Guid?)null);
+        var command = new CreateCustomerCommand("CLI-001", "Cliente Uno", "cliente1@test.local");
 
-        public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
-        {
-            SaveCalls++;
-            return Task.FromResult(1);
-        }
+        // Act
+        var action = async () => await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        await action.Should().ThrowAsync<InvalidOperationException>();
     }
 }

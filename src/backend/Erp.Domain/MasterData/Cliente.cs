@@ -4,14 +4,17 @@ namespace Erp.Domain.MasterData;
 
 public sealed class Cliente : AggregateRoot
 {
-    public Cliente(Guid id, string codice, string ragioneSociale, string email, bool attivo)
+    public Cliente(Guid id, Guid companyId, string codice, string ragioneSociale, string email, bool attivo)
         : base(id)
     {
+        CompanyId = companyId;
         Codice = codice;
         RagioneSociale = ragioneSociale;
         Email = email;
         Attivo = attivo;
     }
+
+    public Guid CompanyId { get; private set; }
 
     public string Codice { get; private set; }
 

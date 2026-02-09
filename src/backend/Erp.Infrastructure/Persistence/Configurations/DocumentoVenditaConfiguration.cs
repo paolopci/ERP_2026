@@ -11,6 +11,8 @@ public sealed class DocumentoVenditaConfiguration : IEntityTypeConfiguration<Doc
         builder.ToTable("DocumentiVendita", "sales");
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.CompanyId).IsRequired();
+
         builder.Property(x => x.Tipo)
             .HasConversion<string>()
             .HasMaxLength(20)
@@ -20,5 +22,10 @@ public sealed class DocumentoVenditaConfiguration : IEntityTypeConfiguration<Doc
             .HasConversion<string>()
             .HasMaxLength(20)
             .IsRequired();
+
+        builder.Property(x => x.CreatedAtUtc).IsRequired();
+        builder.Property(x => x.UpdatedAtUtc).IsRequired();
+
+        builder.HasIndex(x => new { x.CompanyId, x.ClienteId });
     }
 }

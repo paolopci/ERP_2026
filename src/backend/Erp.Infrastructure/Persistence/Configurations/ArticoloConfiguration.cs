@@ -15,6 +15,8 @@ public sealed class ArticoloConfiguration : IEntityTypeConfiguration<Articolo>
             .HasMaxLength(50)
             .IsRequired();
 
+        builder.Property(x => x.CompanyId).IsRequired();
+
         builder.Property(x => x.Descrizione)
             .HasMaxLength(200)
             .IsRequired();
@@ -26,6 +28,9 @@ public sealed class ArticoloConfiguration : IEntityTypeConfiguration<Articolo>
         builder.Property(x => x.Attivo)
             .IsRequired();
 
-        builder.HasIndex(x => x.Sku).IsUnique();
+        builder.Property(x => x.CreatedAtUtc).IsRequired();
+        builder.Property(x => x.UpdatedAtUtc).IsRequired();
+
+        builder.HasIndex(x => new { x.CompanyId, x.Sku }).IsUnique();
     }
 }

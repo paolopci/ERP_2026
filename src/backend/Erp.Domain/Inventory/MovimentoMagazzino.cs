@@ -4,14 +4,17 @@ namespace Erp.Domain.Inventory;
 
 public sealed class MovimentoMagazzino : AggregateRoot
 {
-    public MovimentoMagazzino(Guid id, Guid articoloId, Guid sedeId, decimal quantita, TipoMovimentoMagazzino tipo)
+    public MovimentoMagazzino(Guid id, Guid companyId, Guid articoloId, Guid sedeId, decimal quantita, TipoMovimentoMagazzino tipo)
         : base(id)
     {
+        CompanyId = companyId;
         ArticoloId = articoloId;
         SedeId = sedeId;
         Quantita = quantita;
         Tipo = tipo;
     }
+
+    public Guid CompanyId { get; private set; }
 
     public Guid ArticoloId { get; private set; }
 

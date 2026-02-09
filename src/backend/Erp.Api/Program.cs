@@ -1,4 +1,6 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Threading.RateLimiting;
 using Asp.Versioning;
 using Erp.Api.Configuration;
 using Erp.Api.Middleware;
@@ -6,8 +8,10 @@ using Erp.Application;
 using Erp.Contracts.Security;
 using Erp.Infrastructure;
 using Erp.Infrastructure.Persistence;
+using Erp.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -32,6 +36,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -41,15 +46,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ClockSkew = TimeSpan.FromMinutes(1),
+            NameClaimType = JwtRegisteredClaimNames.UniqueName,
+            RoleClaimType = SecurityClaimTypes.Role
         };
     });
 
 builder.Services.AddAuthorization(options =>
 {
+    options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .RequireClaim(SecurityClaimTypes.CompanyId)
+        .Build();
+
     foreach (var permission in PermissionCatalog.All)
     {
-        options.AddPolicy(permission, policy => policy.RequireClaim("permission", permission));
+        options.AddPolicy(permission, policy => policy.RequireClaim(SecurityClaimTypes.Permission, permission));
     }
 });
 
@@ -69,7 +81,50 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Erp.Api",
+        Version = "v1"
+    });
+
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "Inserire il token JWT nel formato: Bearer {token}",
+        Reference = new OpenApiReference
+        {
+            Type = ReferenceType.SecurityScheme,
+            Id = "Bearer"
+        }
+    };
+
+    options.AddSecurityDefinition("Bearer", securityScheme);
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        [securityScheme] = []
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth-endpoints", context =>
+    {
+        var partitionKey = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
+    });
+});
 
 builder.Services
     .AddHealthChecks()
@@ -89,6 +144,7 @@ builder.Services.AddOpenTelemetry()
         .AddConsoleExporter());
 
 var app = builder.Build();
+await app.Services.SeedIdentityAsync(app.Configuration, app.Environment);
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -100,6 +156,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

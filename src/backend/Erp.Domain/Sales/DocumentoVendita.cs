@@ -4,13 +4,16 @@ namespace Erp.Domain.Sales;
 
 public sealed class DocumentoVendita : AggregateRoot
 {
-    public DocumentoVendita(Guid id, Guid clienteId, TipoDocumentoVendita tipo)
+    public DocumentoVendita(Guid id, Guid companyId, Guid clienteId, TipoDocumentoVendita tipo)
         : base(id)
     {
+        CompanyId = companyId;
         ClienteId = clienteId;
         Tipo = tipo;
         Stato = StatoDocumentoVendita.Bozza;
     }
+
+    public Guid CompanyId { get; private set; }
 
     public Guid ClienteId { get; private set; }
 

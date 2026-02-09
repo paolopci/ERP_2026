@@ -1,5 +1,4 @@
 using Erp.Application.Common.Behaviors;
-using Erp.Application.MasterData.Customers.Commands.CreateCustomer;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +11,7 @@ public static class DependencyInjection
     {
         services.AddMediatR(config => config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
 
-        services.AddScoped<IValidator<CreateCustomerCommand>, CreateCustomerCommandValidator>();
+        services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));

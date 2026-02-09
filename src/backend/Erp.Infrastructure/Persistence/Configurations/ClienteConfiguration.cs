@@ -15,6 +15,8 @@ public sealed class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
             .HasMaxLength(30)
             .IsRequired();
 
+        builder.Property(x => x.CompanyId).IsRequired();
+
         builder.Property(x => x.RagioneSociale)
             .HasMaxLength(120)
             .IsRequired();
@@ -29,6 +31,6 @@ public sealed class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.Property(x => x.CreatedAtUtc).IsRequired();
         builder.Property(x => x.UpdatedAtUtc).IsRequired();
 
-        builder.HasIndex(x => x.Codice).IsUnique();
+        builder.HasIndex(x => new { x.CompanyId, x.Codice }).IsUnique();
     }
 }
